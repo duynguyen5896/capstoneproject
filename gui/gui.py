@@ -238,6 +238,7 @@ class Main(QMainWindow):
 
     def reco_remove_update(self, fs, signal):
         new_signal = self.backend.filter(fs, signal)
+        print new_signal
         print "After removed: {0} -> {1}".format(len(signal), len(new_signal))
         self.recoRecordData = np.concatenate((self.recoRecordData, new_signal))
         real_len = float(len(self.recoRecordData)) / Main.FS / Main.TEST_DURATION * 100

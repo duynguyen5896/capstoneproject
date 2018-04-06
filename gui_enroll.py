@@ -67,17 +67,18 @@ class EnrollGui(QtGui.QMainWindow):
 		self.enrollWav = None
 		self.start_record()
     def stop_enroll_record(self):
-		self.stop_record()
-		print self.recordData[:300]
-		signal = np.array(self.recordData, dtype=NPDtype)
-		self.enrollWav = (EnrollGui.FS, signal)
-		# TODO To Delete
-		filename = self.usernameTextBox.text()
-		path = "\\enrolldata\\" + filename + '\\'
-		path = os.getcwd() + path
-		print path
-		os.mkdir(path, 0755)
-		write_wav(path + 'enroll.wav', *self.enrollWav)
+        self.stop_record()
+		
+        signal = np.array(self.recordData, dtype=NPDtype)
+        self.enrollWav = (EnrollGui.FS, signal)
+        # TODO To Delete
+        filename = self.usernameTextBox.text()
+        path = "\\demotrain\\" + filename + '\\'
+        path = os.getcwd() + path
+        print path
+        os.mkdir(path, 0755)
+        
+        write_wav(path + 'enroll.wav', *self.enrollWav)
     def start_record(self):
 		self.pyaudio = pyaudio.PyAudio()
 		self.status("Recording...")
@@ -110,4 +111,4 @@ class EnrollGui(QtGui.QMainWindow):
 		self.pyaudio.terminate()
 		self.status("Record stopped")
     def do_enroll(self):	
-		enroll('./enrolldata/*', 'm.out')
+		enroll('./demotrain/*', 'm.out')

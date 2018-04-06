@@ -11,14 +11,17 @@ from random import Random
 from silence import remove_silence
 
 from utils import monophonic
-
-NOISE_WAV = "/tmp/noise.wav"
-NOISE_MODEL = "/tmp/noise.prof"
+path = os.getcwd()
+NOISE_WAV = path + "/tmp/noise.wav"
+NOISE_MODEL = path + "/tmp/noise.prof"
 THRES = 0.21
 r = Random()
 class NoiseReduction(object):
 
     def init_noise(self, fs, signal):
+        
+        os.mkdir(path + "/tmp/",0755)
+        print path + "/tmp/"
         wavfile.write(NOISE_WAV, fs, signal)
         os.system("sox {0} -n noiseprof {1}".format(NOISE_WAV, NOISE_MODEL))
 

@@ -32,13 +32,13 @@ class GMMSet(object):
         pass
 
     def predict_one(self, x):
-        print x
         scores = [self.gmm_score(gmm, x) / len(x) for gmm in self.gmms]
         p = sorted(enumerate(scores), key=operator.itemgetter(1), reverse=True)
         p = [(str(self.y[i]), y, p[0][1] - y) for i, y in p]
         result = [(self.y[index], value) for (index, value) in enumerate(scores)]
         p = max(result, key=operator.itemgetter(1))
-	if(p[1] >= -99999):
+        print p
+	if(p[1] >= -1):
             return p[0]
 	else:
 	    return 'unknown'

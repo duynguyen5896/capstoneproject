@@ -3,10 +3,10 @@
 # File: interface.py
 # Date: Thu Sep 14 14:56:58 2017 -0700
 # Author: Yuxin Wu <ppwwyyxxc@gmail.com>
-
 import time
 import os
 import sys
+
 from collections import defaultdict
 from scipy.io import wavfile
 import numpy as np

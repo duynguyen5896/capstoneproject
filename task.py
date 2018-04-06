@@ -57,16 +57,16 @@ def task_enroll(input_dirs, output_model):
     dirs = [d for d in dirs if os.path.isdir(d)]
     files = []
     if len(dirs) == 0:
-        print "No valid directory found!"
+        print ("No valid directory found!")
         sys.exit(1)
     for d in dirs:
         label = os.path.basename(d.rstrip('/'))
 
         wavs = glob.glob(d + '/*.wav')
         if len(wavs) == 0:
-            print "No wav file found in {0}".format(d)
+            print ("No wav file found in {0}".format(d))
             continue
-        print "Label {0} has files {1}".format(label, ','.join(wavs))
+        print ("Label {0} has files {1}".format(label, ','.join(wavs)))
         for wav in wavs:
             fs, signal = read_wav(wav)
             m.enroll(label, fs, signal)

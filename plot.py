@@ -15,15 +15,18 @@ import numpy as np
 import threading
 import time as ti
 from PyQt4 import QtGui
-from gui_project import Gui
+from task import task_enroll as do_enroll
+from gui.utils import write_wav, read_wav
 from gui.interface import ModelInterface
+import soundfile as sf
+from pygame import mixer
 def int_or_str(text):
     """Helper function for argument parsing."""
     try:
         return int(text)
     except ValueError:
         return text
-
+NPDtype = 'int16'
 parser = argparse.ArgumentParser(description=__doc__)
 parser.add_argument(
     '-l', '--list-devices', action='store_true',
@@ -63,8 +66,9 @@ check = False
 threshold = 0.1
 halfShowLength = 5000
 app = QtGui.QApplication(sys.argv)
-gui = Gui()
 e = 1
+fail = False
+voiceMode = True
 #time.sleep(5)
 #playback = False
 
@@ -97,6 +101,7 @@ e = 1
 def audio_callback(indata, frames, time, status):
     """This is called (from a separate thread) for each audio block."""
     global pause
+    
     if pause:
         return
     if status:
@@ -133,6 +138,8 @@ def audio_callback(indata, frames, time, status):
 
 def sendData(link, data, timestart):
     global pause
+    global voiceMode
+    global fail
     time = datetime.datetime.now()
     #print(time.strftime('%Y-%m-%d %H:%M:%S'))
     jsonData = {'wave': data.tolist(),
@@ -143,17 +150,58 @@ def sendData(link, data, timestart):
     jsonData = json.dumps(jsonData, sort_keys=True)
     r = requests.post(url=link,data= jsonData)	
     print("The response is:%s" % r.text)
-    if True :
-        model = ModelInterface.load("m.out")
-        print "Recording Voice..."
-        ti.sleep(5)
-        predictData = rawYData[ -80000: ]
-        print len(predictData)
-        label = model.predict(16000, predictData)
-        print label
+    trigger = json.dumps(r.text)[1]
+    #print trigger  
+    if voiceMode and trigger:
+        voiceMode = False
         pause = True
         print 'pause'
+        model = ModelInterface.load("m.out")
+        #fs,array = read_wav("start.mp3")
+        #sd.play(array,fs)
+        mixer.init(16000)
+        mixer.music.load('start.mp3')
+        mixer.music.play()
+        ti.sleep(2)
+        print "Recording Voice..."
+        samplerate = 44100  # Hertz
+        duration = 3 #8s
+        predictData = sd.rec(int(samplerate * duration), samplerate=samplerate,
+                channels=1, blocking = True)
+        signal = np.array(predictData).flatten()
+        label = model.predict(samplerate, signal)
+        print label
+        if label == 'unknown':
+            mixer.music.load('fail.mp3')
+            mixer.music.play()
+            ti.sleep(3)
+            print "Recording Voice..."
+            predictData = sd.rec(int(samplerate * duration), samplerate=samplerate,
+                channels=1, blocking = True)
+            signal = np.array(predictData).flatten()
+            label1 = model.predict(samplerate, signal)
+            print label1
+            if label1 == "unknown":
+                fail = True
+                notifyFailer()
+        if(fail == False):
+            mixer.music.load('success.mp3')
+            mixer.music.play()
+            ti.sleep(30) 
+        #predictData = np.asarray(predictData,dtype="float32")
+        #write_wav("test.wav",samplerate,signal)
+        #sf.write("test.wav", signal, samplerate)
         
+        print "done"
+        fail = False
+        pause = False
+        voiceMode = True
+        
+def notifyFailer():
+    time = datetime.datetime.now()
+    time =time.strftime('%Y-%m-%d %H:%M:%S')
+    requests.post(url="http://172.20.10.3:8000/noti/send?verify=0&time_start=" +time, data = "")
+    print "fail"
 
 def update_plot(frame):
     """This is called by matplotlib for each plot update.
@@ -181,11 +229,11 @@ def update_plot(frame):
             # t.daemon = True
             # t.start()
             rawYData = np.concatenate((rawYData, ydata))
-            if len(rawYData) >= 80000 * (e + 1) and e <= 16:
+            if len(rawYData) >= 80000 * (e + 1):
                 print('send')
                 senddata = rawYData[e * 80000 : 80000 * (e + 1)]
-                max = np.max(senddata)
-                senddata = np.multiply(senddata, (0.5/max))
+                #max = np.max(senddata)
+                #senddata = np.multiply(senddata, (0.5/max))
                 t = threading.Thread(target=sendData, args=[urlServer, senddata, 0])
                 e += 1
                 t.daemon = True
@@ -255,8 +303,9 @@ def checked(e):
     global check
     check = not check
 def enroll (e):
-	pause = True
-	gui.enroll()
+    global pause
+    pause = True
+    do_enroll('./demotrain/*', 'm.out')
 try:
     from matplotlib.animation import FuncAnimation
     import matplotlib.pyplot as plt
@@ -271,7 +320,7 @@ try:
     if args.samplerate is None:
         device_info = sd.query_devices(args.device, 'input')
         args.samplerate = 16000#device_info['default_samplerate']
-    urlServer = 'http://localhost:8000/label/predict'
+    urlServer = 'http://172.20.10.3:8000/label/predict'
     startInterval = 0
     endInterval = 0
     rawYData = []
