@@ -66,7 +66,7 @@ check = False
 threshold = 0.1
 halfShowLength = 5000
 app = QtGui.QApplication(sys.argv)
-e = 1
+e = 0
 fail = False
 voiceMode = True
 #time.sleep(5)
@@ -107,7 +107,6 @@ def audio_callback(indata, frames, time, status):
     if status:
         file = sys.stderr
         print(status, file)
-
     q.put(indata[ : , mapping])
     # dataQueue.put(indata.copy().flatten())
     # if dataQueue.qsize() > 40:#about 1.s
@@ -140,6 +139,9 @@ def sendData(link, data, timestart):
     global pause
     global voiceMode
     global fail
+    global rawYData
+    global e
+    
     time = datetime.datetime.now()
     #print(time.strftime('%Y-%m-%d %H:%M:%S'))
     jsonData = {'wave': data.tolist(),
@@ -150,9 +152,12 @@ def sendData(link, data, timestart):
     jsonData = json.dumps(jsonData, sort_keys=True)
     r = requests.post(url=link,data= jsonData)	
     print("The response is:%s" % r.text)
-    trigger = json.dumps(r.text)[1]
-    #print trigger  
-    if voiceMode and trigger:
+    trigger = json.loads(r.text)["Trigger"]
+    labelsound = str(json.loads(r.text)["Labels"])
+    #trigger = r.json()
+    #trigger = trigger[0]['Trigger']
+    print trigger
+    if voiceMode and trigger == True:
         voiceMode = False
         pause = True
         print 'pause'
@@ -165,10 +170,13 @@ def sendData(link, data, timestart):
         ti.sleep(2)
         print "Recording Voice..."
         samplerate = 44100  # Hertz
-        duration = 3 #8s
+        duration = 5 #8s
         predictData = sd.rec(int(samplerate * duration), samplerate=samplerate,
                 channels=1, blocking = True)
         signal = np.array(predictData).flatten()
+        #VAD filter
+        
+        #-------
         label = model.predict(samplerate, signal)
         print label
         if label == 'unknown':
@@ -183,7 +191,7 @@ def sendData(link, data, timestart):
             print label1
             if label1 == "unknown":
                 fail = True
-                notifyFailer()
+                notifyFailer(labelsound)
         if(fail == False):
             mixer.music.load('success.mp3')
             mixer.music.play()
@@ -193,14 +201,16 @@ def sendData(link, data, timestart):
         #sf.write("test.wav", signal, samplerate)
         
         print "done"
+        rawYData= []
+        e = 0
         fail = False
         pause = False
         voiceMode = True
         
-def notifyFailer():
+def notifyFailer(labelsound):
     time = datetime.datetime.now()
     time =time.strftime('%Y-%m-%d %H:%M:%S')
-    requests.post(url="http://172.20.10.3:8000/noti/send?verify=0&time_start=" +time, data = "")
+    requests.post(url="http://172.20.10.3:8000/noti/send?verify=0&labelsound="+labelsound+"&time_start=" +time, data = "")
     print "fail"
 
 def update_plot(frame):
@@ -229,15 +239,20 @@ def update_plot(frame):
             # t.daemon = True
             # t.start()
             rawYData = np.concatenate((rawYData, ydata))
+            #print len(rawYData)
             if len(rawYData) >= 80000 * (e + 1):
-                print('send')
+           
                 senddata = rawYData[e * 80000 : 80000 * (e + 1)]
-                #max = np.max(senddata)
-                #senddata = np.multiply(senddata, (0.5/max))
-                t = threading.Thread(target=sendData, args=[urlServer, senddata, 0])
+                max = np.max(senddata)
                 e += 1
-                t.daemon = True
-                t.start()
+                print max
+                if max > 0.1:
+                    print('send')
+                    #senddata = np.multiply(senddata, (0.5/max))
+                    t = threading.Thread(target=sendData, args=[urlServer, senddata, 0])
+                    
+                    t.daemon = True
+                    t.start()
             # if len(rawYData) >= iteration * 16000:
             #     pre = iteration
             #     iteration += 1
