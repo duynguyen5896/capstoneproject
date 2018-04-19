@@ -178,19 +178,22 @@ def sendData(link, data, timestart):
         
         #-------
         label = model.predict(samplerate, signal)
-        print label
         if label == 'unknown':
             mixer.music.load('fail.mp3')
             mixer.music.play()
             ti.sleep(3)
+            
             print "Recording Voice..."
             predictData = sd.rec(int(samplerate * duration), samplerate=samplerate,
                 channels=1, blocking = True)
             signal = np.array(predictData).flatten()
             label1 = model.predict(samplerate, signal)
-            print label1
+            #print label1
             if label1 == "unknown":
                 fail = True
+                mixer.music.load('fail.mp3')
+                mixer.music.play()
+                ti.sleep(3)
                 notifyFailer(labelsound)
         if(fail == False):
             mixer.music.load('success.mp3')
@@ -210,7 +213,7 @@ def sendData(link, data, timestart):
 def notifyFailer(labelsound):
     time = datetime.datetime.now()
     time =time.strftime('%Y-%m-%d %H:%M:%S')
-    requests.post(url="http://172.20.10.3:8000/noti/send?verify=0&labelsound="+labelsound+"&time_start=" +time, data = "")
+    requests.post(url="http://172.29.192.70:8000/noti/send?verify=0&labelsound="+labelsound+"&time_start=" +time, data = "")
     print "fail"
 
 def update_plot(frame):
@@ -335,7 +338,7 @@ try:
     if args.samplerate is None:
         device_info = sd.query_devices(args.device, 'input')
         args.samplerate = 16000#device_info['default_samplerate']
-    urlServer = 'http://172.20.10.3:8000/label/predict'
+    urlServer = 'http://172.29.192.70:8000/label/predict'
     startInterval = 0
     endInterval = 0
     rawYData = []

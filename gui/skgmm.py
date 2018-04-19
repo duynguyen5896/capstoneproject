@@ -37,8 +37,8 @@ class GMMSet(object):
         p = [(str(self.y[i]), y, p[0][1] - y) for i, y in p]
         result = [(self.y[index], value) for (index, value) in enumerate(scores)]
         p = max(result, key=operator.itemgetter(1))
-        print p
-	if(p[1] >= -1):
+        #print p
+	if(p[1] >= -0.6):
             return p[0]
 	else:
 	    return 'unknown'
